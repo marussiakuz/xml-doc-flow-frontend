@@ -160,6 +160,115 @@ async function downloadLatestXml(documentId) {
 }
 
 /**
+ * GET /documents/{documentId}/history
+ */
+async function getDocumentHistory(documentId, page, size) {
+    const p = page != null ? page : 0;
+    const s = size != null ? size : 20;
+    const response = await fetch(
+        API_CONFIG.baseUrl + '/documents/' + encodeURIComponent(documentId) + '/history?page=' + p + '&size=' + s,
+        withSession({})
+    );
+    if (!response.ok) throw await buildHttpError(response);
+    return response.json();
+}
+
+/**
+ * GET /audit-log (только ADMIN)
+ */
+async function getAuditLog(page, size) {
+    const p = page != null ? page : 0;
+    const s = size != null ? size : 20;
+    const response = await fetch(
+        API_CONFIG.baseUrl + '/audit-log?page=' + p + '&size=' + s,
+        withSession({})
+    );
+    if (!response.ok) throw await buildHttpError(response);
+    return response.json();
+}
+
+/**
+ * GET /admin/users (только ADMIN)
+ */
+async function adminListUsers(role, page, size) {
+    const p = page != null ? page : 0;
+    const s = size != null ? size : 20;
+    const r = role != null && String(role).trim() ? '&role=' + encodeURIComponent(String(role).trim()) : '';
+    const response = await fetch(
+        API_CONFIG.baseUrl + '/admin/users?page=' + p + '&size=' + s + r,
+        withSession({ headers: headers() })
+    );
+    if (!response.ok) throw await buildHttpError(response);
+    return response.json();
+}
+
+/**
+ * GET /admin/users/{id} (только ADMIN)
+ */
+async function adminGetUser(id) {
+    const response = await fetch(
+        API_CONFIG.baseUrl + '/admin/users/' + encodeURIComponent(id),
+        withSession({ headers: headers() })
+    );
+    if (!response.ok) throw await buildHttpError(response);
+    return response.json();
+}
+
+/**
+ * POST /admin/users (только ADMIN)
+ */
+async function adminCreateUser(request) {
+    const response = await fetch(API_CONFIG.baseUrl + '/admin/users', {
+        method: 'POST',
+        headers: headers({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(request || {})
+    });
+    if (!response.ok) throw await buildHttpError(response);
+    return response.json();
+}
+
+/**
+ * PUT /admin/users/{id} (только ADMIN)
+ */
+async function adminUpdateUser(id, request) {
+    const response = await fetch(API_CONFIG.baseUrl + '/admin/users/' + encodeURIComponent(id), {
+        method: 'PUT',
+        headers: headers({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(request || {})
+    });
+    if (!response.ok) throw await buildHttpError(response);
+    return response.json();
+}
+
+/**
+ * DELETE /admin/users/{id} (только ADMIN)
+ */
+async function adminDeleteUser(id) {
+    const response = await fetch(API_CONFIG.baseUrl + '/admin/users/' + encodeURIComponent(id), {
+        method: 'DELETE',
+        credentials: 'include'
+    });
+    if (!response.ok) throw await buildHttpError(response);
+    return null;
+}
+
+/**
+ * POST /admin/users/{id}/reset-password (только ADMIN)
+ */
+async function adminResetPassword(id, password) {
+    const response = await fetch(API_CONFIG.baseUrl + '/admin/users/' + encodeURIComponent(id) + '/reset-password', {
+        method: 'POST',
+        headers: headers({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify({ password: password })
+    });
+    if (!response.ok) throw await buildHttpError(response);
+    return null;
+}
+
+/**
  * POST /auth/login
  */
 async function login(username, password) {
@@ -169,9 +278,10 @@ async function login(username, password) {
         credentials: 'include',
         body: JSON.stringify({ username: username, password: password })
     });
-    const data = await parseJsonBody(response);
+    // Важно: тело ответа можно прочитать только один раз.
+    // Если сначала прочитать body, а потом построить HttpError — buildHttpError попробует прочитать body повторно.
     if (!response.ok) throw await buildHttpError(response);
-    return data;
+    return parseJsonBody(response);
 }
 
 /**
